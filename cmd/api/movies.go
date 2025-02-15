@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"greenlight/internal/data"
 	"net/http"
 	"time"
@@ -28,8 +27,6 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 		Version:   1,
 	}
 
-	app.writeJson(w, http.StatusOK, movie, nil)
-
-	fmt.Fprintf(w, "%d", id)
+	app.writeJson(w, http.StatusOK, envelope{"movie": movie}, nil)
 
 }

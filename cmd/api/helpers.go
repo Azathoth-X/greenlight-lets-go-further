@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -48,6 +49,10 @@ func (app *application) writeJson(w http.ResponseWriter, status int, data envelo
 
 func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any) error {
 
+	maxBytes := 1_048_576
+
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
+
 	err := json.NewDecoder(r.Body).Decode(&dst)
 
 	if err != nil {
@@ -55,6 +60,7 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 		var syntaxError *json.SyntaxError
 		var unmarshalTypeError *json.UnmarshalTypeError
 		var invalidUnmarshalError *json.InvalidUnmarshalError
+		var maxBytesError *http.MaxBytesError
 
 		switch {
 
@@ -72,6 +78,13 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 
 		case errors.Is(err, io.EOF):
 			return errors.New("JSON can not be empty")
+
+		case strings.HasPrefix(err.Error(), "json: unknown field"):
+			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field")
+			return fmt.Errorf("body contains unknown field %q", fieldName)
+
+		case errors.As(err, &maxBytesError):
+			return fmt.Errorf("body size should be less than %v bytes", maxBytesError.Limit)
 
 		case errors.As(err, &invalidUnmarshalError):
 			panic(err)

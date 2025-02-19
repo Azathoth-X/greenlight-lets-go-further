@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"greenlight/internal/data"
+	"greenlight/internal/validator"
 	"net/http"
 	"time"
 )
@@ -10,10 +11,10 @@ import (
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
-		Title  string       `json:"title"`
-		Year   int          `json:"year"`
-		Runime data.Runtime `json:"runtime"`
-		Genres []string     `json:"genres"`
+		Title   string       `json:"title"`
+		Year    int          `json:"year"`
+		Runtime data.Runtime `json:"runtime"`
+		Genres  []string     `json:"genres"`
 	}
 
 	err := app.readJson(w, r, &input)
@@ -23,7 +24,21 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	fmt.Printf("%v", input)
+	movie := &data.Movie{
+		Title:   input.Title,
+		Year:    int32(input.Year),
+		Runtime: input.Runtime,
+		Genres:  input.Genres,
+	}
+
+	v := validator.NewValidator()
+
+	if data.ValidateMovie(v, movie); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	fmt.Printf("%+v\n", input)
 }
 
 func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request) {

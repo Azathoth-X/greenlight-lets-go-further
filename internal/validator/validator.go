@@ -45,7 +45,8 @@ func Matches(input string, rx *regexp.Regexp) bool {
 }
 
 func Unique[T comparable](values []T) bool {
-	var mp map[T]bool
+
+	mp := make(map[T]bool)
 
 	for _, v := range values {
 		mp[v] = true

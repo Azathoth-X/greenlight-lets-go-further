@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"greenlight/internal/data"
 	"log/slog"
 	"net/http"
 	"os"
@@ -30,10 +31,13 @@ type config struct {
 type application struct {
 	config config
 	logger *slog.Logger
+	models data.Models
 }
 
 func main() {
+
 	godotenv.Load()
+
 	var cfg config
 
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
@@ -56,9 +60,12 @@ func main() {
 	defer db.Close()
 	logger.Info("database connection pool established")
 
+	model := data.NewModels(db)
+
 	app := application{
 		config: cfg,
 		logger: logger,
+		models: model,
 	}
 
 	srv := &http.Server{

@@ -20,17 +20,17 @@ func (r Runtime) MarshalJSON() ([]byte, error) {
 
 }
 
-func (r *Runtime) UnMarshallJSON(jsonValue []byte) error {
+func (r *Runtime) UnmarshalJSON(jsonValue []byte) error {
 
 	unquotedJSONValue, err := strconv.Unquote(string(jsonValue))
-
 	if err != nil {
 		return ErrorInvalidRuntimeFormat
 	}
 
-	splitStrings := strings.Split(unquotedJSONValue, "")
+	splitStrings := strings.Split(unquotedJSONValue, " ")
+	fmt.Printf("%v", splitStrings)
 
-	if len(splitStrings) < 2 || splitStrings[1] != "mins" {
+	if len(splitStrings) != 2 || splitStrings[1] != "mins" {
 		return ErrorInvalidRuntimeFormat
 	}
 

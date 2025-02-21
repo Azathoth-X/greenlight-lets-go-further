@@ -61,7 +61,7 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 	if err != nil {
 
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrorNotFoundRecord
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
@@ -69,9 +69,48 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 }
 
 func (m MovieModel) Update(movie *Movie) error {
+
+	stmt := `	update into movies
+				set title=$1,year = $2, runtime = $3, genres = $4, version = version + 1
+				where id=$5 
+				returning version`
+
+	err := m.DB.QueryRow(stmt, movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres), movie.ID).Scan(&movie.Version)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrRecordNotFound
+
+		default:
+			return err
+		}
+	}
+
 	return nil
 }
 
-func (m MovieModel) Delete(id int64) (*Movie, error) {
-	return nil, nil
+func (m MovieModel) Delete(id int64) error {
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+
+	stmnt := `	delete from movies 
+				where id=$1`
+	res, err := m.DB.Exec(stmnt, id)
+
+	if err != nil {
+		return err
+	}
+
+	rowsRet, err := res.RowsAffected()
+
+	if err != nil {
+		return err
+	}
+
+	if rowsRet == 0 {
+		return ErrRecordNotFound
+	}
+	return nil
 }

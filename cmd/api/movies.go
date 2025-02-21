@@ -146,3 +146,31 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 }
+
+func (app *application) deleteMovieHandler(w http.ResponseWriter, r *http.Request) {
+
+	id, err := app.readIdParam(r)
+
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	err = app.models.Movies.Delete(id)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = app.writeJson(w, http.StatusOK, envelope{"message": fmt.Sprintf("Movie with id %v was deleted", id)}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}

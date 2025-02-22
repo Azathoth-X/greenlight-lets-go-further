@@ -70,17 +70,17 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 
 func (m MovieModel) Update(movie *Movie) error {
 
-	stmt := `	update into movies
+	stmt := `	update movies
 				set title=$1,year = $2, runtime = $3, genres = $4, version = version + 1
-				where id=$5 
+				where id=$5 and version=$6
 				returning version`
 
-	err := m.DB.QueryRow(stmt, movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres), movie.ID).Scan(&movie.Version)
+	err := m.DB.QueryRow(stmt, movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres), movie.ID, movie.Version).Scan(&movie.Version)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			return ErrRecordNotFound
+			return ErrEditConflict
 
 		default:
 			return err

@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"greenlight/internal/validator"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -96,4 +98,45 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 	}
 	return nil
 
+}
+
+func (app *application) readString(qs url.Values, key, defaultValue string) string {
+
+	value := qs.Get(key)
+
+	if value == "" {
+		return defaultValue
+	}
+
+	return value
+
+}
+
+func (app *application) readCSV(qs url.Values, key string, defaultValues []string) []string {
+
+	values := qs.Get(key)
+
+	if values == "" {
+		return defaultValues
+	}
+
+	return strings.Split(values, ",")
+}
+
+func (app *application) readInt(qs url.Values, key string, defaultValue int, v *validator.Validator) int {
+
+	s := qs.Get(key)
+
+	if s == "" {
+		return defaultValue
+	}
+
+	i, err := strconv.Atoi(s)
+
+	if err != nil {
+		v.AddError(key, "must be an integer value")
+		return defaultValue
+	}
+
+	return i
 }

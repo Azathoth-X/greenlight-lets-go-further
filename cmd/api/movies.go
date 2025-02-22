@@ -211,10 +211,17 @@ func (app *application) listMovieHandler(w http.ResponseWriter, r *http.Request)
 
 	input.Filters.SortSafeList = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
 
-	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+	if data.ValidateFilters(v, input.Filters); v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
-	fmt.Printf("%+v", input)
+	movies, err := app.models.Movies.GetAll()
+
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJson(w, http.StatusOK, envelope{"movies": movies}, nil)
 }

@@ -128,3 +128,50 @@ func (m MovieModel) Delete(id int64) error {
 	}
 	return nil
 }
+
+func (m MovieModel) GetAll() ([]*Movie, error) {
+
+	var list []*Movie
+
+	stmt := `	SELECT id, created_at, title, year, runtime, genres, version
+				FROM movies
+				ORDER BY id`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, stmt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+
+		var movie Movie
+
+		err := rows.Scan(
+			&movie.ID,
+			&movie.CreatedAt,
+			&movie.Title,
+			&movie.Year,
+			&movie.Runtime,
+			pq.Array(&movie.Genres),
+			&movie.Version,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		list = append(list, &movie)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}

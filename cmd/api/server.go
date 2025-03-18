@@ -39,7 +39,16 @@ func (app *application) serve() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		errShutdown <- srv.Shutdown(ctx)
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			errShutdown <- err
+		}
+
+		app.logger.Info("completing bg tasks")
+
+		app.wg.Wait()
+
+		errShutdown <- nil
 	}()
 
 	err := srv.ListenAndServe()

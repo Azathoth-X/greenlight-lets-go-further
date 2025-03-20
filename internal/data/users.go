@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"greenlight/internal/validator"
@@ -162,7 +163,7 @@ func (m UserModel) Update(user *User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, stmt, args...).Scan(user.Version)
+	err := m.DB.QueryRowContext(ctx, stmt, args...).Scan(&user.Version)
 
 	if err != nil {
 		switch {
@@ -175,5 +176,46 @@ func (m UserModel) Update(user *User) error {
 		}
 	}
 	return nil
+
+}
+
+func (m *UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error) {
+
+	smtm := `SELECT users.id, users.created_at, users.name, users.email, users.password_hash, users.activated, users.version
+			FROM users
+			INNER JOIN tokens
+			ON users.id = tokens.user_id
+			WHERE tokens.hash = $1
+			AND tokens.scope = $2 
+			AND tokens.expiry > $3`
+
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
+
+	args := []any{tokenHash[:], tokenScope, time.Now()}
+
+	user := &User{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, smtm, args...).Scan(
+		&user.ID,
+		&user.CreatedAt,
+		&user.Name,
+		&user.Email,
+		&user.Password.hash,
+		&user.Activated,
+		&user.Version,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return user, nil
 
 }

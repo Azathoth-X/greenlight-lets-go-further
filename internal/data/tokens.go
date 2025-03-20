@@ -45,8 +45,8 @@ func generateToken(userId int64, ttl time.Duration, scope string) (*Token, error
 }
 
 func ValidateTokenPlaintext(v *validator.Validator, plaintext string) {
-	v.Check(plaintext == "", "token", "must be provided")
-	v.Check(len(plaintext) == 26, "token", "lenght of token must be 26")
+	v.Check(plaintext != "", "token", "must be provided")
+	v.Check(len(plaintext) == 26, "token", "length of token must be 26")
 }
 
 type TokenModel struct {

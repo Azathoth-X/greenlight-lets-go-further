@@ -1,9 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"greenlight/internal/data"
+	"greenlight/internal/validator"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,7 +31,7 @@ func (app *application) recoverPanicMiddleware(next http.HandlerFunc) http.Handl
 	})
 }
 
-func (app *application) rateLimit(next http.HandlerFunc) http.HandlerFunc {
+func (app *application) rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 	type client struct {
 		lastSeen    time.Time
@@ -82,5 +86,50 @@ func (app *application) rateLimit(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) authenticateMiddleware(next http.HandlerFunc) http.HandlerFunc {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Add("Vary", "Authorization")
+
+		authorizationHeader := r.Header.Get("Authorization")
+
+		if authorizationHeader == "" {
+			r = app.contextSetUser(r, data.AnonymousUser)
+			next(w, r)
+			return
+		}
+
+		headerParts := strings.Split(authorizationHeader, " ")
+		if len(headerParts) != 2 && headerParts[0] != "Bearer" {
+			app.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
+
+		token := headerParts[1]
+		v := validator.NewValidator()
+
+		if data.ValidateTokenPlaintext(v, token); !v.Valid() {
+			app.invalidAuthenticationTokenResponse(w, r)
+			return
+		}
+
+		user, err := app.models.Users.GetForToken(data.ScopeAuthentication, token)
+		if err != nil {
+			switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				//TODO::invalid authentication response
+			default:
+				app.serverErrorResponse(w, r, err)
+			}
+			return
+		}
+
+		r = app.contextSetUser(r, user)
+
+		next(w, r)
 	})
 }

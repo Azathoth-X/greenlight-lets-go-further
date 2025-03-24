@@ -121,7 +121,7 @@ func (app *application) authenticateMiddleware(next http.HandlerFunc) http.Handl
 		if err != nil {
 			switch {
 			case errors.Is(err, data.ErrRecordNotFound):
-				//TODO::invalid authentication response
+				app.invalidAuthenticationTokenResponse(w, r)
 			default:
 				app.serverErrorResponse(w, r, err)
 			}
@@ -132,4 +132,38 @@ func (app *application) authenticateMiddleware(next http.HandlerFunc) http.Handl
 
 		next(w, r)
 	})
+}
+
+func (app *application) requireAuthenticatedUserMiddleware(next http.HandlerFunc) http.HandlerFunc {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		user := app.contextGetUser(r)
+
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(w, r)
+			return
+		}
+
+		next(w, r)
+
+	})
+}
+
+func (app *application) requireActivatedUserMiddleware(next http.HandlerFunc) http.HandlerFunc {
+
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		user := app.contextGetUser(r)
+
+		if !user.Activated {
+			app.inactiveAccountResponse(w, r)
+			return
+		}
+
+		next(w, r)
+
+	})
+
+	return app.requireAuthenticatedUserMiddleware(fn)
 }

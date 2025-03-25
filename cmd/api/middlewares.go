@@ -167,3 +167,26 @@ func (app *application) requireActivatedUserMiddleware(next http.HandlerFunc) ht
 
 	return app.requireAuthenticatedUserMiddleware(fn)
 }
+
+func (app *application) requirePermissionsMiddleware(code string, next http.HandlerFunc) http.HandlerFunc {
+
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		user := app.contextGetUser(r)
+
+		permissions, err := app.models.Permissions.GetAllForUser(user.ID)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		if !permissions.Includes(code) {
+			app.notPermittedResponse(w, r)
+			return
+		}
+
+		next(w, r)
+	})
+
+	return app.requireActivatedUserMiddleware(fn)
+}

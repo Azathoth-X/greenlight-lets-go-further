@@ -17,12 +17,12 @@ type PermissionModel struct {
 	DB *sql.DB
 }
 
-func (m *PermissionModel) GetAllForUser(userid int) (PermissionsList, error) {
-	stmt := `SELECT permissions.code 
-			 FROM permissions
-			 INNER JOIN user_permissions WHERE user_permissions.permissions_id=permissions.id
-			 INNER JOIN users WHERE user_permissions.user_id=users.id
-			 WHERE users.id=$1`
+func (m *PermissionModel) GetAllForUser(userid int64) (PermissionsList, error) {
+	stmt := ` SELECT permissions.code
+			FROM permissions
+			INNER JOIN users_permissions ON users_permissions.permission_id = permissions.id
+			INNER JOIN users ON users_permissions.user_id = users.id
+			WHERE users.id = $1`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()

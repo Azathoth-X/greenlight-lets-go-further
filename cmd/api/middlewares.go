@@ -190,3 +190,20 @@ func (app *application) requirePermissionsMiddleware(code string, next http.Hand
 
 	return app.requireActivatedUserMiddleware(fn)
 }
+
+func (app *application) enableCORS(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Vary", "Origin")
+
+		origin := r.Header.Get("Origin")
+
+		for i := range app.config.cors.trustedOrigins {
+			if origin == app.config.cors.trustedOrigins[i] {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				break
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}

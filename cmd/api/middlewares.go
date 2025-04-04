@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"greenlight/internal/data"
 	"greenlight/internal/validator"
@@ -216,4 +217,29 @@ func (app *application) enableCORS(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (app *application) metricsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+
+	var (
+		totalRequestReceived = expvar.NewInt("total_requests_received")
+		totalResponseSent    = expvar.NewInt("total_response_sent")
+		totalProcessingTime  = expvar.NewInt("total_processing_time_us")
+	)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		curTime := time.Now()
+
+		totalRequestReceived.Add(1)
+
+		next.ServeHTTP(w, r)
+
+		totalResponseSent.Add(1)
+
+		duration := time.Since(curTime).Microseconds()
+		totalProcessingTime.Add(duration)
+
+	})
+
 }

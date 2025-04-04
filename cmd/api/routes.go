@@ -27,5 +27,5 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthenticationTokenHandler)
 
 	router.HandlerFunc(http.MethodGet, "/debug/vars", expvar.Handler().ServeHTTP)
-	return app.recoverPanicMiddleware(app.enableCORS(app.rateLimitMiddleware(app.authenticateMiddleware(router.ServeHTTP))))
+	return app.metricsMiddleware(app.recoverPanicMiddleware(app.enableCORS(app.rateLimitMiddleware(app.authenticateMiddleware(router.ServeHTTP)))))
 }
